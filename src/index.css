@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-tech: "Rajdhani", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(10, 15, 30, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(6, 182, 212, 0.05);
+  }
+  
+  .glass-panel-active {
+    background: rgba(15, 25, 45, 0.85);
+    border: 1px solid rgba(6, 182, 212, 0.6);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), inset 0 0 20px rgba(6, 182, 212, 0.1);
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px currentColor;
+  }
+}
+
+.bg-grid-tech {
+  background-image:
+    linear-gradient(to right, rgba(6, 182, 212, 0.15) 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(6, 182, 212, 0.15) 2px, transparent 2px);
+  background-size: 100px 100px;
+  background-position: center center;
+}
+
+/* Add a subtle scanning line effect to the background */
+.bg-grid-tech::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200%;
+  background: linear-gradient(to bottom, transparent 45%, rgba(6, 182, 212, 0.1) 50%, transparent 55%);
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scan {
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0%); }
+}
+
+/* Skeletal Animation Keyframes */
+@keyframes walk-leg-l {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(25deg); }
+  75% { transform: rotate(-25deg); }
+}
+@keyframes walk-leg-r {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-25deg); }
+  75% { transform: rotate(25deg); }
+}
+@keyframes walk-arm-l {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-25deg); }
+  75% { transform: rotate(25deg); }
+}
+@keyframes walk-arm-r {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(25deg); }
+  75% { transform: rotate(-25deg); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1) translateY(0); }
+  50% { transform: scaleY(1.05) translateY(-1px); }
+}
+
+.is-walking .leg-l { animation: walk-leg-l 0.5s infinite linear; }
+.is-walking .leg-r { animation: walk-leg-r 0.5s infinite linear; }
+.is-walking .arm-l { animation: walk-arm-l 0.5s infinite linear; }
+.is-walking .arm-r { animation: walk-arm-r 0.5s infinite linear; }
+.is-idle .torso { animation: breathe 2s infinite ease-in-out; }
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #030508;
+  color: #e0e0e0;
+  overflow: hidden;
+}

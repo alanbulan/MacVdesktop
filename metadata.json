@@ -1,0 +1,5 @@
+{
+  "name": "像素风服务器算力看板",
+  "description": "基于 pixel-agents 概念的中文服务器算力可视化监控看板",
+  "requestFramePermissions": []
+}
