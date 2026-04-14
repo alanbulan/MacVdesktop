@@ -1,23 +1,37 @@
-export interface ServerNode {
-  id: string;
-  name: string;
-  status: 'online' | 'offline' | 'high-load';
-  cpuUsage: number;
-  gpuUsage: number;
-  ramUsage: number;
-  networkTraffic: number; // MB/s
-  x: number; // Grid position X
-  y: number; // Grid position Y
+import type {
+  TelemetryMetric,
+  TelemetryModuleSnapshot,
+  TelemetrySnapshot,
+} from './domain/telemetry/types'
+
+export type DashboardModule = TelemetryModuleSnapshot
+export type DashboardMetric = TelemetryMetric
+export type DashboardSnapshot = TelemetrySnapshot
+export type TelemetryLoadStatus = 'loading' | 'ready' | 'error'
+
+export interface InspectionAgent {
+  id: string
+  name: string
+  task: string
+  detail?: string
+  role: 'engineer' | 'courier' | 'security' | 'admin'
+  x: number
+  y: number
+  status: 'idle' | 'moving' | 'working'
 }
 
-export interface Agent {
-  id: string;
-  name: string;
-  task: string;
-  role: 'engineer' | 'courier' | 'security' | 'admin';
-  x: number;
-  y: number;
-  targetX: number;
-  targetY: number;
-  status: 'idle' | 'working' | 'moving';
+export interface TelemetryHistorySample {
+  moduleId: string
+  metricId: string
+  value: string
+  numericValue: number
+  updatedAt: string
+  freshness: 'fresh' | 'stale'
+}
+
+export interface UseTelemetryResult {
+  snapshot: DashboardSnapshot
+  history: Record<string, TelemetryHistorySample[]>
+  status: TelemetryLoadStatus
+  error: string | null
 }

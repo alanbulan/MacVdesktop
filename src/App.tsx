@@ -5,6 +5,8 @@
 
 import { Dashboard } from './components/Dashboard';
 
-export default function App() {
+export function App() {
   return <Dashboard />;
 }
+
+export default App;

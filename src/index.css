@@ -82,11 +82,46 @@
   50% { transform: scaleY(1.05) translateY(-1px); }
 }
 
+@keyframes hover-drift {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes trail-flicker {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.85); }
+  50% { opacity: 0.75; transform: scaleX(1); }
+}
+
+@keyframes security-scan {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+@keyframes courier-lean {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(1px) rotate(4deg); }
+}
+
+@keyframes engineer-check {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes admin-hover {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.03); }
+}
+
 .is-walking .leg-l { animation: walk-leg-l 0.5s infinite linear; }
 .is-walking .leg-r { animation: walk-leg-r 0.5s infinite linear; }
 .is-walking .arm-l { animation: walk-arm-l 0.5s infinite linear; }
 .is-walking .arm-r { animation: walk-arm-r 0.5s infinite linear; }
 .is-idle .torso { animation: breathe 2s infinite ease-in-out; }
+.is-idle { animation: hover-drift 2.4s infinite ease-in-out; }
+.engineer-pose .torso { animation: engineer-check 1.8s infinite ease-in-out; }
+.courier-pose { animation: courier-lean 1.4s infinite ease-in-out; }
+.security-pose { animation: security-scan 1.2s infinite ease-in-out; }
+.admin-pose { animation: admin-hover 2s infinite ease-in-out; }
 
 body {
   font-family: "Inter", sans-serif;

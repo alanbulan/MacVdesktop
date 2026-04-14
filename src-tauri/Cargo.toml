@@ -1,0 +1,23 @@
+[package]
+name = "macvdesktop"
+version = "0.1.0"
+description = "Truthful Apple Silicon telemetry chamber"
+authors = ["Claude Code"]
+edition = "2021"
+
+[lib]
+name = "macvdesktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sysinfo = "0.37"
+tauri = { version = "2", features = [] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-foundation = { version = "0.3", features = ["NSProcessInfo", "NSArray", "NSString", "NSError"] }
+objc2-metal = { version = "0.3", features = ["MTLDevice", "MTLCounters", "MTLCommandQueue", "MTLCommandBuffer", "MTLCommandEncoder", "MTLBlitCommandEncoder", "MTLResource"] }
