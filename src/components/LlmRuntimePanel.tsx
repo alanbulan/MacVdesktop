@@ -1,5 +1,5 @@
-import React from 'react'
-import { Bot, Cpu, Play, RefreshCcw, Square, TestTubeDiagonal } from 'lucide-react'
+import React, { useState } from 'react'
+import { Bot, Check, Copy, Cpu, Play, RefreshCcw, Square, TestTubeDiagonal } from 'lucide-react'
 import { createLlmRuntimeViewModel } from '../lib/llmRuntimeViewModel'
 import type { UseLlmRuntimeResult } from '../types'
 
@@ -9,6 +9,29 @@ interface Props {
 
 export const LlmRuntimePanel: React.FC<Props> = ({ runtime }) => {
   const viewModel = createLlmRuntimeViewModel(runtime)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  async function handleCopyAccess() {
+    const payload = [
+      `OpenAI Base URL: ${runtime.state.openaiBaseUrl}`,
+      `局域网 OpenAI: ${runtime.state.lanOpenaiBaseUrl ?? '当前不可用'}`,
+      `局域网 Native: ${runtime.state.lanNativeBaseUrl ?? '当前不可用'}`,
+      `API Key: ${runtime.state.apiKeyHint}`,
+      `Model ID: ${runtime.state.activeModelId ?? runtime.state.preferredModelId ?? '未配置'}`,
+    ].join('\n')
+
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        throw new Error('clipboard unavailable')
+      }
+      await navigator.clipboard.writeText(payload)
+      setCopyState('copied')
+      window.setTimeout(() => setCopyState('idle'), 2000)
+    } catch {
+      setCopyState('failed')
+      window.setTimeout(() => setCopyState('idle'), 2500)
+    }
+  }
 
   return (
     <div className="w-80 h-full glass-panel rounded-2xl p-6 flex flex-col text-white overflow-y-auto relative">
@@ -52,7 +75,17 @@ export const LlmRuntimePanel: React.FC<Props> = ({ runtime }) => {
         </div>
 
         <div className="bg-black/40 p-4 rounded-xl border border-fuchsia-900/50 space-y-3">
-          <div className="text-xs uppercase tracking-[0.2em] text-fuchsia-400/80 font-tech">对外接入</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs uppercase tracking-[0.2em] text-fuchsia-400/80 font-tech">对外接入</div>
+            <button
+              type="button"
+              onClick={() => void handleCopyAccess()}
+              className="rounded-md border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1.5 text-[10px] text-cyan-100 hover:bg-cyan-400/20 flex items-center gap-1.5"
+            >
+              {copyState === 'copied' ? <Check size={11} /> : <Copy size={11} />}
+              {copyState === 'copied' ? '已复制' : copyState === 'failed' ? '复制失败' : '复制接入信息'}
+            </button>
+          </div>
           {viewModel.accessRows.map((row) => (
             <div key={row.label} className="flex items-start justify-between gap-3 border-t border-white/5 pt-3 first:border-t-0 first:pt-0">
               <div className="text-xs uppercase tracking-[0.2em] text-gray-400 font-tech">{row.label}</div>

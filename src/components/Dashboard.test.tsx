@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UseLlmRuntimeResult, UseTelemetryResult } from '../types'
 import { calculateTelemetryClusterScale } from '../domain/telemetry/layout'
@@ -7,6 +7,7 @@ import { ServerRoom } from './ServerRoom'
 
 const mockUseTelemetry = vi.fn<() => UseTelemetryResult>()
 const mockUseLlmRuntime = vi.fn<() => UseLlmRuntimeResult>()
+const mockWriteText = vi.fn<(text: string) => Promise<void>>()
 
 function createTelemetryResult(overrides: Partial<UseTelemetryResult> = {}): UseTelemetryResult {
   return {
@@ -82,6 +83,12 @@ describe('Dashboard', () => {
   beforeEach(() => {
     mockUseTelemetry.mockReturnValue(createTelemetryResult())
     mockUseLlmRuntime.mockReturnValue(createLlmRuntimeResult())
+    mockWriteText.mockReset()
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText,
+      },
+    })
   })
 
   it('uses Chinese browser-mode warning copy instead of fake telemetry status', () => {
@@ -175,6 +182,16 @@ describe('Dashboard', () => {
     expect(screen.getAllByText('qwen3.5:4b-q4_K_M').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Ollama').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Smoke Test/i).length).toBeGreaterThan(0)
+  })
+
+  it('copies the LAN runtime access information from the panel', async () => {
+    mockWriteText.mockResolvedValue(undefined)
+    render(<Dashboard />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: /复制接入信息/i })[0])
+
+    expect(mockWriteText).toHaveBeenCalledWith(expect.stringContaining('OpenAI Base URL: http://127.0.0.1:11434/v1'))
+    expect(mockWriteText).toHaveBeenCalledWith(expect.stringContaining('Model ID: qwen3.5:4b-q4_K_M'))
   })
 
   it('keeps the center scene offset left to balance the added right panel', () => {
