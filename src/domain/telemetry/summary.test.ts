@@ -48,9 +48,9 @@ describe('getModuleDetailLines', () => {
         'Host CPU usage sampled across 8 logical cores.',
         '主指标: 42%',
         '主指标来源: tauri-host',
-        '数据新鲜度: fresh',
-        '最近更新: 2026-04-14T09:00:00.000Z',
-        'Logical cores: 8 · tauri-host',
+        '数据新鲜度: 实时',
+        '最近更新: 2026/4/14 17:00:00',
+        'Logical cores: 8 · tauri-host · 实时',
         '宿主告警: 无',
       ]),
     )
@@ -79,5 +79,29 @@ describe('getModuleDetailLines', () => {
         '宿主告警: 无',
       ]),
     )
+  })
+
+  it('marks stale live secondary metrics as cached host telemetry in detail lines', () => {
+    const lines = getModuleDetailLines(
+      createModule({
+        secondaryMetrics: [
+          {
+            id: 'gpu-power',
+            label: 'GPU power',
+            metric: {
+              state: 'live',
+              source: 'tauri-host',
+              value: '0.5 W',
+              numericValue: 0.5,
+              unit: 'watts',
+              updatedAt: '2026-04-14T09:00:00.000Z',
+              freshness: 'stale',
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(lines).toEqual(expect.arrayContaining(['GPU power: 0.5 W · tauri-host · 缓存']))
   })
 })

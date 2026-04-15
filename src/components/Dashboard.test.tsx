@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UseTelemetryResult } from '../types'
+import { calculateTelemetryClusterScale } from '../domain/telemetry/layout'
 import { Dashboard } from './Dashboard'
 import { ServerRoom } from './ServerRoom'
 
@@ -15,6 +16,9 @@ function createTelemetryResult(overrides: Partial<UseTelemetryResult> = {}): Use
     history: {},
     status: 'ready',
     error: null,
+    helperStatus: null,
+    startHelper: async () => {},
+    stopHelper: async () => {},
     ...overrides,
   }
 }
@@ -72,31 +76,33 @@ describe('Dashboard', () => {
   })
 
   it('shows Chinese truthful loading snapshot labels', () => {
-    mockUseTelemetry.mockReturnValue({
-      snapshot: {
-        runtime: { kind: 'tauri' },
-        modules: [
-          {
-            id: 'cpu-cluster',
-            name: 'CPU Cluster',
-            summary: 'Waiting for the native Tauri telemetry snapshot.',
-            status: 'warning',
-            x: 0,
-            y: 0,
-            primaryMetric: {
-              state: 'loading',
-              source: 'tauri-host',
-              reason: 'Waiting for the native Tauri telemetry snapshot.',
+    mockUseTelemetry.mockReturnValue(
+      createTelemetryResult({
+        snapshot: {
+          runtime: { kind: 'tauri' },
+          modules: [
+            {
+              id: 'cpu-cluster',
+              name: 'CPU Cluster',
+              summary: '正在等待 Tauri 原生宿主遥测快照。',
+              status: 'warning',
+              x: 0,
+              y: 0,
+              primaryMetric: {
+                state: 'loading',
+                source: 'tauri-host',
+                reason: '正在等待 Tauri 原生宿主遥测快照。',
+              },
+              secondaryMetrics: [],
+              alerts: [],
             },
-            secondaryMetrics: [],
-            alerts: [],
-          },
-        ],
-      },
-      history: {},
-      status: 'loading',
-      error: null,
-    })
+          ],
+        },
+        history: {},
+        status: 'loading',
+        error: null,
+      }),
+    )
 
     render(<Dashboard />)
 
@@ -196,6 +202,11 @@ describe('Dashboard', () => {
     unavailableLabels.forEach((label) => {
       expect(label.className).toContain('text-gray-300')
     })
+  })
+
+  it('calculates a larger centered cluster scale for roomy fullscreen viewports', () => {
+    expect(calculateTelemetryClusterScale(1600, 900)).toBeGreaterThan(1)
+    expect(calculateTelemetryClusterScale(900, 700)).toBe(1)
   })
 
   it('renders animated inspection agents in the chamber view', () => {

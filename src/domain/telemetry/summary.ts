@@ -1,5 +1,24 @@
 import type { TelemetryMetric, TelemetryModuleSnapshot, TelemetrySnapshot } from './types'
 
+function formatFreshnessLabel(freshness: 'fresh' | 'stale'): string {
+  return freshness === 'fresh' ? '实时' : '缓存'
+}
+
+function formatUpdatedAt(updatedAt: string): string {
+  const asNumber = Number(updatedAt)
+
+  if (!Number.isNaN(asNumber) && updatedAt.trim() !== '') {
+    return new Date(asNumber * 1000).toLocaleString('zh-CN', { hour12: false })
+  }
+
+  const parsed = new Date(updatedAt)
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleString('zh-CN', { hour12: false })
+  }
+
+  return updatedAt
+}
+
 export interface TelemetryOverviewSummary {
   runtimeLabel: string
   runtimeWarning: string
@@ -9,11 +28,19 @@ export interface TelemetryOverviewSummary {
 }
 
 function formatMetricValue(metric: TelemetryMetric): string {
-  if (metric.state !== 'live') {
-    return '不可用'
+  if (metric.state === 'live') {
+    return metric.value
   }
 
-  return metric.value
+  if (metric.state === 'loading') {
+    return '加载中'
+  }
+
+  if (metric.state === 'error') {
+    return '错误'
+  }
+
+  return '不可用'
 }
 
 export function getTelemetryOverviewSummary(snapshot: TelemetrySnapshot): TelemetryOverviewSummary {
@@ -48,8 +75,8 @@ export function getModuleDetailLines(module: TelemetryModuleSnapshot): string[] 
   if (module.primaryMetric.state === 'live') {
     detailLines.push(`主指标: ${module.primaryMetric.value}`)
     detailLines.push(`主指标来源: ${module.primaryMetric.source}`)
-    detailLines.push(`数据新鲜度: ${module.primaryMetric.freshness}`)
-    detailLines.push(`最近更新: ${module.primaryMetric.updatedAt}`)
+    detailLines.push(`数据新鲜度: ${formatFreshnessLabel(module.primaryMetric.freshness)}`)
+    detailLines.push(`最近更新: ${formatUpdatedAt(module.primaryMetric.updatedAt)}`)
   }
 
   if (module.primaryMetric.state === 'loading') {
@@ -71,7 +98,14 @@ export function getModuleDetailLines(module: TelemetryModuleSnapshot): string[] 
 
   if (module.secondaryMetrics.length > 0) {
     detailLines.push(
-      ...module.secondaryMetrics.map((metric) => `${metric.label}: ${formatMetricValue(metric.metric)} · ${metric.metric.source}`),
+      ...module.secondaryMetrics.map((metric) => {
+        if (metric.metric.state === 'live') {
+          const freshnessSuffix = metric.metric.freshness === 'stale' ? ' · 缓存' : ' · 实时'
+          return `${metric.label}: ${metric.metric.value} · ${metric.metric.source}${freshnessSuffix}`
+        }
+
+        return `${metric.label}: ${formatMetricValue(metric.metric)} · ${metric.metric.source}`
+      }),
     )
   } else {
     detailLines.push('次级遥测: 无')

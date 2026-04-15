@@ -74,3 +74,11 @@ export interface TelemetrySnapshot {
   runtime: TelemetryRuntime
   modules: TelemetryModuleSnapshot[]
 }
+
+export type PrivilegedHelperState = 'authorization_required' | 'starting' | 'running' | 'stale' | 'failed'
+
+export interface PrivilegedHelperStatus {
+  state: PrivilegedHelperState
+  message: string
+  updatedAt?: string
+}

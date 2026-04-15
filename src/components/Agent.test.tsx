@@ -21,13 +21,13 @@ describe('Agent positioning', () => {
           x: 10,
           y: 10,
           status: 'working',
-          detail: '主指标 42% · fresh · 无宿主告警',
+          detail: '主指标 42% · 实时 · 无宿主告警',
         }}
       />,
     )
 
     expect(screen.getByText('巡检 CPU Cluster')).toBeTruthy()
-    expect(screen.getByText('主指标 42% · fresh · 无宿主告警')).toBeTruthy()
+    expect(screen.getByText('主指标 42% · 实时 · 无宿主告警')).toBeTruthy()
   })
 
   it('keeps richer role staging without extra attached add-on props', () => {

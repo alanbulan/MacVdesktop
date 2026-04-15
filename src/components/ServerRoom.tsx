@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
-import type { DashboardModule } from '../types'
+import React, { useEffect, useRef, useState } from 'react'
+import { calculateTelemetryClusterScale } from '../domain/telemetry/layout'
 import { createInspectionAgents } from '../lib/inspectionAgents'
+import type { DashboardModule } from '../types'
 import { Agent } from './Agent'
 import { ServerRack } from './ServerRack'
 
@@ -12,6 +13,8 @@ interface Props {
 
 export const ServerRoom: React.FC<Props> = ({ modules, onSelectModule, selectedModuleId }) => {
   const [patrolPhase, setPatrolPhase] = useState(0)
+  const [clusterScale, setClusterScale] = useState(1)
+  const roomRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -23,10 +26,41 @@ export const ServerRoom: React.FC<Props> = ({ modules, onSelectModule, selectedM
     }
   }, [])
 
+  useEffect(() => {
+    const room = roomRef.current
+    if (!room) {
+      return
+    }
+
+    const updateClusterScale = () => {
+      const { width, height } = room.getBoundingClientRect()
+      setClusterScale(calculateTelemetryClusterScale(width, height))
+    }
+
+    updateClusterScale()
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateClusterScale)
+
+      return () => {
+        window.removeEventListener('resize', updateClusterScale)
+      }
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateClusterScale()
+    })
+    observer.observe(room)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
   const agents = createInspectionAgents(modules, patrolPhase)
 
   return (
-    <div className="absolute inset-0 bg-[#030508] overflow-hidden">
+    <div ref={roomRef} className="absolute inset-0 bg-[#030508] overflow-hidden">
       <div className="absolute top-1/2 left-1/2 w-[2000px] h-[2000px] -translate-x-1/2 -translate-y-1/2 bg-grid-tech">
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
           <div className="absolute top-1/2 left-1/2 w-[1000px] h-[1000px] bg-cyan-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full"></div>
@@ -120,7 +154,12 @@ export const ServerRoom: React.FC<Props> = ({ modules, onSelectModule, selectedM
           <div aria-label="舱室粒子 5" className="absolute top-[61%] left-[47%] h-1.5 w-1.5 rounded-full bg-cyan-200/60 shadow-[0_0_10px_rgba(165,243,252,0.7)] animate-pulse"></div>
         </div>
 
-        <div className="absolute top-0 left-0 w-full h-full">
+        <div
+          aria-label="中心遥测集群"
+          className="absolute top-0 left-0 w-full h-full"
+          data-cluster-scale={clusterScale.toFixed(3)}
+          style={{ transform: `scale(${clusterScale})`, transformOrigin: 'center center' }}
+        >
           {modules.map((module) => (
             <ServerRack
               key={module.id}

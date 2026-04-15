@@ -1,6 +1,25 @@
 import { telemetryChamberLayout } from '../domain/telemetry/layout'
 import type { DashboardModule, InspectionAgent } from '../types'
 
+function formatFreshnessLabel(freshness: 'fresh' | 'stale'): string {
+  return freshness === 'fresh' ? '实时' : '缓存'
+}
+
+function formatUpdatedAt(updatedAt: string): string {
+  const asNumber = Number(updatedAt)
+
+  if (!Number.isNaN(asNumber) && updatedAt.trim() !== '') {
+    return new Date(asNumber * 1000).toLocaleString('zh-CN', { hour12: false })
+  }
+
+  const parsed = new Date(updatedAt)
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleString('zh-CN', { hour12: false })
+  }
+
+  return updatedAt
+}
+
 const ROLE_SEQUENCE: ReadonlyArray<InspectionAgent['role']> = ['admin', 'engineer', 'security', 'courier']
 
 function getTask(module: DashboardModule, phase: number): string {
@@ -18,11 +37,11 @@ function getTask(module: DashboardModule, phase: number): string {
 
 function getDetail(module: DashboardModule, phase: number): string {
   if (module.primaryMetric.state === 'live') {
-    const freshnessLabel = module.primaryMetric.freshness === 'fresh' ? 'fresh' : 'stale'
+    const freshnessLabel = formatFreshnessLabel(module.primaryMetric.freshness)
     const alertLabel = module.alerts.length > 0 ? module.alerts[0].message : '无宿主告警'
     const liveDetails = [
       `主指标 ${module.primaryMetric.value} · ${freshnessLabel} · ${alertLabel}`,
-      `更新时间 ${module.primaryMetric.updatedAt} · 主指标 ${module.primaryMetric.value}`,
+      `更新时间 ${formatUpdatedAt(module.primaryMetric.updatedAt)} · 主指标 ${module.primaryMetric.value}`,
       `来源 ${module.primaryMetric.source} · 主指标 ${module.primaryMetric.value}`,
       `扫描 ${module.name} 协同路径 · 主指标 ${module.primaryMetric.value}`,
     ] as const

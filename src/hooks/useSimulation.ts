@@ -1,9 +1,32 @@
 import { useState, useEffect } from 'react';
-import { ServerNode, Agent } from '../types';
+
+type SimulationServerNode = {
+  id: string;
+  name: string;
+  status: 'online' | 'offline' | 'high-load';
+  cpuUsage: number;
+  gpuUsage: number;
+  ramUsage: number;
+  networkTraffic: number;
+  x: number;
+  y: number;
+};
+
+type SimulationAgent = {
+  id: string;
+  name: string;
+  task: string;
+  role: 'admin' | 'engineer' | 'security' | 'courier';
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  status: 'idle' | 'moving' | 'working';
+};
 
 // Generate a 4x4 grid of hardware modules for a single Mac SoC
-const generateServers = (): ServerNode[] => {
-  const servers: ServerNode[] = [];
+const generateServers = (): SimulationServerNode[] => {
+  const servers: SimulationServerNode[] = [];
   const components = [
     '性能核心 (P-Core) 01', '性能核心 (P-Core) 02', '性能核心 (P-Core) 03', '性能核心 (P-Core) 04',
     '能效核心 (E-Core) 01', '能效核心 (E-Core) 02', '能效核心 (E-Core) 03', '能效核心 (E-Core) 04',
@@ -33,7 +56,7 @@ const generateServers = (): ServerNode[] => {
 
 const INITIAL_SERVERS = generateServers();
 
-const INITIAL_AGENTS: Agent[] = [
+const INITIAL_AGENTS: SimulationAgent[] = [
   { id: 'agent-1', name: 'kernel_task', task: '内核线程调度', role: 'admin', x: 9.5, y: 9.5, targetX: 13.5, targetY: 9.5, status: 'idle' },
   { id: 'agent-2', name: 'WindowServer', task: 'UI 渲染合成', role: 'engineer', x: 15.5, y: 11.5, targetX: 15.5, targetY: 15.5, status: 'idle' },
   { id: 'agent-3', name: 'sysmond', task: '系统性能监控', role: 'security', x: 11.5, y: 15.5, targetX: 9.5, targetY: 15.5, status: 'idle' },
@@ -42,8 +65,8 @@ const INITIAL_AGENTS: Agent[] = [
 ];
 
 export function useSimulation() {
-  const [servers, setServers] = useState<ServerNode[]>(INITIAL_SERVERS);
-  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
+  const [servers, setServers] = useState<SimulationServerNode[]>(INITIAL_SERVERS);
+  const [agents, setSimulationAgents] = useState<SimulationAgent[]>(INITIAL_AGENTS);
 
   // Simulate server metrics changing
   useEffect(() => {
@@ -83,7 +106,7 @@ export function useSimulation() {
   // Simulate agent movement
   useEffect(() => {
     const interval = setInterval(() => {
-      setAgents(prev => prev.map(agent => {
+      setSimulationAgents(prev => prev.map(agent => {
         if (agent.x === agent.targetX && agent.y === agent.targetY) {
           if (Math.random() > 0.6) {
             const targetServer = servers[Math.floor(Math.random() * servers.length)];

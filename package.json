@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest",
+    "powermetrics:helper": "python3 src-tauri/powermetrics_helper.py",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
@@ -18,6 +19,7 @@
     "@tauri-apps/api": "^2.10.1",
     "@vitejs/plugin-react": "^5.0.4",
     "lucide-react": "^0.546.0",
+    "motion": "^12.38.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "vite": "^6.2.0"

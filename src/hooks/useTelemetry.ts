@@ -22,11 +22,11 @@ function createInitialSnapshot(): TelemetrySnapshot {
     modules: browserSnapshot.modules.map((module) => ({
       ...module,
       status: 'warning',
-      summary: 'Waiting for the native Tauri telemetry snapshot.',
+      summary: '正在等待 Tauri 原生宿主遥测快照。',
       primaryMetric: {
         state: 'loading',
         source: 'tauri-host',
-        reason: 'Waiting for the native Tauri telemetry snapshot.',
+        reason: '正在等待 Tauri 原生宿主遥测快照。',
       },
       secondaryMetrics: [],
       alerts: [],
@@ -41,6 +41,9 @@ export function useTelemetry(): UseTelemetryResult {
     history: {},
     status: initialSnapshot.runtime.kind === 'browser' ? 'ready' : 'loading',
     error: null,
+    helperStatus: null,
+    startHelper: async () => {},
+    stopHelper: async () => {},
   })
 
   useEffect(() => {
@@ -49,7 +52,10 @@ export function useTelemetry(): UseTelemetryResult {
 
     async function loadTelemetry() {
       try {
-        const snapshot = await provider.getSnapshot()
+        const [snapshot, helperStatus] = await Promise.all([
+          provider.getSnapshot(),
+          provider.getHelperStatus(),
+        ])
 
         if (cancelled) {
           return
@@ -65,6 +71,9 @@ export function useTelemetry(): UseTelemetryResult {
             history: nextHistory,
             status: 'ready',
             error: null,
+            helperStatus,
+            startHelper: currentResult.startHelper,
+            stopHelper: currentResult.stopHelper,
           }
         })
       } catch (error) {
@@ -72,16 +81,49 @@ export function useTelemetry(): UseTelemetryResult {
           return
         }
 
-        const message = error instanceof Error ? error.message : 'Failed to load telemetry snapshot'
+        const message = error instanceof Error ? error.message : '遥测快照加载失败'
 
         setResult((currentResult) => ({
           snapshot: currentResult.snapshot,
           history: currentResult.history,
           status: 'error',
           error: message,
+          helperStatus: currentResult.helperStatus,
+          startHelper: currentResult.startHelper,
+          stopHelper: currentResult.stopHelper,
         }))
       }
     }
+
+    async function startHelper() {
+      const helperStatus = await provider.startHelper()
+      if (cancelled) {
+        return
+      }
+      setResult((currentResult) => ({
+        ...currentResult,
+        helperStatus,
+      }))
+      await loadTelemetry()
+    }
+
+    async function stopHelper() {
+      const helperStatus = await provider.stopHelper()
+      if (cancelled) {
+        return
+      }
+      setResult((currentResult) => ({
+        ...currentResult,
+        helperStatus,
+      }))
+      await loadTelemetry()
+    }
+
+    setResult((currentResult) => ({
+      ...currentResult,
+      startHelper,
+      stopHelper,
+    }))
 
     loadTelemetry()
 

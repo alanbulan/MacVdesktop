@@ -8,7 +8,7 @@ import { ServerRoom } from './ServerRoom'
 
 export const Dashboard: React.FC = () => {
   const telemetryResult = useTelemetry()
-  const { snapshot, status, error } = telemetryResult
+  const { snapshot, status, error, helperStatus, startHelper, stopHelper } = telemetryResult
   const history = telemetryResult.history ?? {}
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
@@ -96,6 +96,32 @@ export const Dashboard: React.FC = () => {
         </h2>
 
         <div className="space-y-6 flex-1">
+          {helperStatus && snapshot.runtime.kind === 'tauri' ? (
+            <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-cyan-50">
+              <div className="text-xs uppercase tracking-[0.25em] font-tech text-cyan-300">高权限宿主遥测</div>
+              <div className="mt-2 text-sm leading-relaxed">{helperStatus.message}</div>
+              <div className="mt-3 flex gap-2">
+                {helperStatus.state !== 'running' ? (
+                  <button
+                    type="button"
+                    onClick={() => void startHelper()}
+                    className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-400/20"
+                  >
+                    启用高权限遥测
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void stopHelper()}
+                    className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-100 hover:bg-amber-400/20"
+                  >
+                    停止高权限遥测
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : null}
+
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100">
             <div className="flex items-start space-x-3">
               <AlertTriangle size={18} className="mt-0.5 text-amber-300" />
@@ -129,7 +155,7 @@ export const Dashboard: React.FC = () => {
             <div className="bg-black/70 p-3 rounded-lg border border-cyan-800/70 text-xs text-cyan-300/80 font-mono h-56 overflow-hidden flex flex-col justify-end space-y-1 shadow-[inset_0_0_30px_rgba(34,211,238,0.08)]">
               <div className="opacity-45">&gt; 运行环境: {overview.runtimeLabel}</div>
               <div className="opacity-55">&gt; {overview.runtimeWarning}</div>
-              <div className="opacity-65">&gt; 界面状态: {status}</div>
+              <div className="opacity-65">&gt; 界面状态: {status === 'loading' ? '加载中' : status === 'error' ? '加载失败' : '就绪'}</div>
               {error ? <div className="opacity-90 text-pink-300">&gt; 错误: {error}</div> : null}
               {logLines.map((line, index) => (
                 <div key={`${line}-${index}`} className={index >= logLines.length - 2 ? 'opacity-95 text-cyan-200' : 'opacity-75'}>
@@ -145,7 +171,12 @@ export const Dashboard: React.FC = () => {
 
       <div className="absolute right-6 top-32 bottom-6 z-50 flex flex-col pointer-events-none">
         <div className="pointer-events-auto h-full">
-          <MetricsPanel module={selectedModule} history={selectedModule ? history[`${selectedModule.id}:primary`] ?? [] : []} />
+          <MetricsPanel
+            module={selectedModule}
+            history={selectedModule ? history[`${selectedModule.id}:primary`] ?? [] : []}
+            helperMessage={helperStatus?.message ?? null}
+            onStartHelper={startHelper}
+          />
         </div>
       </div>
 

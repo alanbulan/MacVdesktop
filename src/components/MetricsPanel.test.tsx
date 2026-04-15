@@ -154,6 +154,36 @@ describe('MetricsPanel', () => {
     expect(screen.getByText('GPU activity telemetry requires a Metal counter collector.')).toBeTruthy()
   })
 
+  it('renders stale live metrics as cached host telemetry', () => {
+    render(
+      <MetricsPanel
+        history={[]}
+        module={{
+          id: 'power-draw',
+          name: 'Power Draw',
+          summary: 'Best-effort power telemetry sampled from cached powermetrics SMC output.',
+          status: 'healthy',
+          x: 2,
+          y: 2,
+          primaryMetric: {
+            state: 'live',
+            source: 'tauri-host',
+            value: '8.4 W',
+            numericValue: 8.4,
+            unit: 'watts',
+            updatedAt: '123',
+            freshness: 'stale',
+          },
+          secondaryMetrics: [],
+          alerts: [],
+        }}
+      />,
+    )
+
+    expect(screen.getByText('8.4 W')).toBeTruthy()
+    expect(screen.getByText('真实宿主遥测读数（缓存，可能已过期）')).toBeTruthy()
+  })
+
   it('renders a truthful sparkline only when real numeric history exists', () => {
     render(
       <MetricsPanel

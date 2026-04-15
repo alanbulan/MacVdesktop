@@ -38,7 +38,7 @@ describe('createInspectionAgents', () => {
     const first = createInspectionAgents(modules, 0)[0]
 
     expect(first.task).toBe('巡检 CPU Cluster')
-    expect(first.detail).toBe('主指标 42% · fresh · 无宿主告警')
+    expect(first.detail).toBe('主指标 42% · 实时 · 无宿主告警')
   })
 
   it('varies healthy agent narration across patrol phases', () => {

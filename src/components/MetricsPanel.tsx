@@ -7,6 +7,8 @@ import { Activity, CircleAlert, Cpu, HardDrive, Info, Terminal } from 'lucide-re
 interface Props {
   module: DashboardModule | null
   history: TelemetryHistorySample[]
+  helperMessage?: string | null
+  onStartHelper?: () => Promise<void>
 }
 
 interface MetricDisplay {
@@ -20,7 +22,7 @@ interface MetricDisplay {
 function formatPrimaryMetric(metric: TelemetryMetric): MetricDisplay {
   if (metric.state === 'live') {
     const value = metric.value
-    const description = metric.freshness === 'fresh' ? '实时遥测读数' : '遥测数据可能已过期'
+    const description = metric.freshness === 'fresh' ? '真实宿主遥测读数' : '真实宿主遥测读数（缓存，可能已过期）'
 
     return {
       label: '主指标',
@@ -62,10 +64,12 @@ function formatPrimaryMetric(metric: TelemetryMetric): MetricDisplay {
 
 function formatSecondaryMetric(metric: TelemetryMetric, label: string): MetricDisplay {
   if (metric.state === 'live') {
+    const freshnessDescription = metric.freshness === 'stale' ? '来源：tauri-host（缓存样本）' : `来源：${metric.source}`
+
     return {
       label,
       value: metric.value,
-      description: `来源：${metric.source}`,
+      description: freshnessDescription,
       colorClass: 'text-cyan-300',
       icon: Activity,
     }
@@ -80,7 +84,7 @@ function formatSecondaryMetric(metric: TelemetryMetric, label: string): MetricDi
   }
 }
 
-export const MetricsPanel: React.FC<Props> = ({ module, history }) => {
+export const MetricsPanel: React.FC<Props> = ({ module, history, helperMessage, onStartHelper }) => {
   if (!module) {
     return (
       <div className="w-80 h-full glass-panel rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 relative">
@@ -153,6 +157,21 @@ export const MetricsPanel: React.FC<Props> = ({ module, history }) => {
             ) : (
               <div className="text-sm text-gray-400">该模块暂无可用的次级遥测指标。</div>
             )}
+            {helperMessage && module.status === 'unavailable' ? (
+              <div className="border-t border-white/5 pt-3 space-y-2">
+                <div className="text-xs uppercase tracking-[0.2em] text-cyan-500/80 font-tech">高权限宿主遥测</div>
+                <div className="rounded-md border border-cyan-500/30 px-3 py-2 text-xs text-cyan-200">{helperMessage}</div>
+                {onStartHelper ? (
+                  <button
+                    type="button"
+                    onClick={() => void onStartHelper()}
+                    className="rounded-md border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100 hover:bg-cyan-400/20"
+                  >
+                    启用高权限遥测
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             {module.alerts.length > 0 ? (
               <div className="border-t border-white/5 pt-3 space-y-2">
                 <div className="text-xs uppercase tracking-[0.2em] text-cyan-500/80 font-tech">宿主告警</div>

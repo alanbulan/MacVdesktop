@@ -1,4 +1,5 @@
 import type {
+  PrivilegedHelperStatus,
   TelemetryMetric,
   TelemetryModuleSnapshot,
   TelemetrySnapshot,
@@ -34,4 +35,7 @@ export interface UseTelemetryResult {
   history: Record<string, TelemetryHistorySample[]>
   status: TelemetryLoadStatus
   error: string | null
+  helperStatus: PrivilegedHelperStatus | null
+  startHelper: () => Promise<void>
+  stopHelper: () => Promise<void>
 }

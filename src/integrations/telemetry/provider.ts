@@ -1,10 +1,13 @@
 import { createBrowserTelemetrySnapshot } from '../../domain/telemetry/browserSnapshot'
-import type { TelemetrySnapshot } from '../../domain/telemetry/types'
+import type { PrivilegedHelperStatus, TelemetrySnapshot } from '../../domain/telemetry/types'
 import { getRuntimeKind } from '../../lib/runtime'
 import { createTauriTelemetryProvider } from './tauriProvider'
 
 export interface TelemetryProvider {
   getSnapshot: () => Promise<TelemetrySnapshot>
+  getHelperStatus: () => Promise<PrivilegedHelperStatus | null>
+  startHelper: () => Promise<PrivilegedHelperStatus | null>
+  stopHelper: () => Promise<PrivilegedHelperStatus | null>
 }
 
 export function createTelemetryProvider(): TelemetryProvider {
@@ -14,5 +17,8 @@ export function createTelemetryProvider(): TelemetryProvider {
 
   return {
     getSnapshot: async () => createBrowserTelemetrySnapshot(),
+    getHelperStatus: async () => null,
+    startHelper: async () => null,
+    stopHelper: async () => null,
   }
 }

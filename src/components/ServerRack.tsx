@@ -72,14 +72,14 @@ function getTelemetryAccent(module: DashboardModule) {
 
   if (module.primaryMetric.state === 'loading') {
     return {
-      label: 'Loading',
+      label: '加载中',
       glowClass: 'shadow-[0_0_18px_rgba(245,158,11,0.22)]',
       borderClass: 'border-amber-400/40',
     }
   }
 
   return {
-    label: 'Unavailable',
+    label: '不可用',
     glowClass: 'shadow-none',
     borderClass: 'border-gray-700/60',
   }
@@ -106,7 +106,7 @@ export const ServerRack: React.FC<Props> = ({ module, onClick, isSelected }) => 
           : Math.floor((telemetryChamberLayout.anchorY + module.y * telemetryChamberLayout.spacing) * telemetryChamberLayout.pixelUnit + 68),
       }}
       onClick={() => onClick(module)}
-      aria-label={`Select telemetry module ${module.name}`}
+      aria-label={`选择遥测模块 ${module.name}`}
     >
       <div className={`w-full h-full glass-panel rounded-lg flex flex-col overflow-hidden border ${styles.border} ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-transparent' : ''}`}>
         <div className={`w-full ${styles.header} text-center py-1 border-b border-white/10`}>

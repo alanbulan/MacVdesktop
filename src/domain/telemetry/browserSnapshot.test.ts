@@ -11,8 +11,8 @@ describe('createBrowserTelemetrySnapshot', () => {
     expect(snapshot.runtime.kind).toBe('browser')
     expect(cpuCluster?.primaryMetric.state).toBe('unavailable')
     expect(cpuCluster).toMatchObject({
-      name: 'CPU Cluster',
-      summary: 'Requires Tauri desktop host for live processor telemetry.',
+      name: 'CPU 簇',
+      summary: '需要 Tauri 桌面宿主才能提供实时处理器遥测。',
       status: 'unavailable',
       x: 0,
       y: 0,
@@ -21,10 +21,10 @@ describe('createBrowserTelemetrySnapshot', () => {
     })
     expect(thermalState?.primaryMetric).toMatchObject({
       state: 'unavailable',
-      reason: expect.stringContaining('Requires Tauri desktop host'),
+      reason: expect.stringContaining('需要 Tauri 桌面宿主'),
     })
     expect(thermalState).toMatchObject({
-      name: 'Thermal State',
+      name: '热状态',
       status: 'unavailable',
       x: 0,
       y: 2,
@@ -40,7 +40,7 @@ describe('createBrowserTelemetrySnapshot', () => {
     expect(cpuCluster?.primaryMetric).toMatchObject({
       state: 'unavailable',
       source: 'browser-fallback',
-      reason: 'Requires Tauri desktop host integration',
+      reason: '需要 Tauri 桌面宿主集成',
     })
   })
 })
