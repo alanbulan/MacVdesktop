@@ -370,14 +370,6 @@ fn alerts_for_status(
     }
 }
 
-fn normalize_process_cpu(cpu_usage: f64, logical_cores: usize) -> f64 {
-    if logical_cores == 0 {
-        return 0.0;
-    }
-
-    (cpu_usage / logical_cores as f64).clamp(0.0, 100.0)
-}
-
 fn format_percent(value: f64) -> String {
     format!("{value:.0}%")
 }
@@ -1325,12 +1317,11 @@ fn collect_top_process_module(system: &mut System) -> TelemetryModuleSnapshot {
             .partial_cmp(&right.cpu_usage())
             .unwrap_or(Ordering::Equal)
     });
-    let logical_cores = system.cpus().len();
 
     let (process_name, cpu_percent) = if let Some(process) = maybe_process {
         (
             process.name().to_string_lossy().into_owned(),
-            normalize_process_cpu(process.cpu_usage() as f64, logical_cores),
+            (process.cpu_usage() as f64).clamp(0.0, 100.0),
         )
     } else {
         ("暂无进程数据".to_string(), 0.0)
@@ -1929,8 +1920,8 @@ pub fn get_telemetry_snapshot(state: State<'_, std::sync::Mutex<TelemetryCollect
 mod tests {
     use super::{
         alerts_for_status, collect_telemetry_snapshot, collect_top_process_module,
-        compute_cpu_cluster_sample, fan_module_from_apple_smc, gpu_module_from_powermetrics,
-        memory_pressure_state_label, normalize_process_cpu, parse_powermetrics_output,
+        compute_cpu_cluster_sample, fan_module_from_apple_smc, format_percent,
+        gpu_module_from_powermetrics, memory_pressure_state_label, parse_powermetrics_output,
         power_module_from_powermetrics, MetalCollectorExecutionState,
         MetalCollectorScaffoldState, MetricState, PowermetricsHostSample, SampleStamp,
         TelemetryCollectorState,
@@ -1965,12 +1956,6 @@ mod tests {
     }
 
     #[test]
-    fn normalize_process_cpu_scales_to_host_capacity() {
-        assert_eq!(normalize_process_cpu(240.0, 8), 30.0);
-        assert_eq!(normalize_process_cpu(400.0, 4), 100.0);
-    }
-
-    #[test]
     fn top_process_module_reports_a_named_process_metric() {
         let mut system = System::new_all();
         let module = collect_top_process_module(&mut system);
@@ -1978,6 +1963,14 @@ mod tests {
         assert_eq!(module.id, "top-process");
         assert_eq!(module.secondary_metrics[0].id, "top-process-name");
         assert!(!module.summary.is_empty());
+    }
+
+    #[test]
+    fn top_process_current_value_keeps_single_process_percent_scale() {
+        let raw_cpu_usage: f64 = 33.5;
+        let displayed = raw_cpu_usage.clamp(0.0, 100.0);
+
+        assert_eq!(format_percent(displayed), "34%");
     }
 
     #[test]
