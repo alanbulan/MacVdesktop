@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { calculateTelemetryClusterScale } from '../domain/telemetry/layout'
-import { createInspectionAgents } from '../lib/inspectionAgents'
+import { createFactoryAgentIntents } from '../lib/sceneChoreography'
+import { createFactoryConduits, createFactoryDocks, createFactoryRoutes, createFactoryZones } from '../lib/sceneModel'
 import type { DashboardModule } from '../types'
-import { Agent } from './Agent'
-import { ServerRack } from './ServerRack'
+import { FactoryAgentLayer } from './scene/FactoryAgentLayer'
+import { FactoryAmbientEffects } from './scene/FactoryAmbientEffects'
+import { FactoryCoreShell } from './scene/FactoryCoreShell'
+import { FactoryInfrastructure } from './scene/FactoryInfrastructure'
+import { FactoryModuleLayer } from './scene/FactoryModuleLayer'
+import { FactoryPathNetwork } from './scene/FactoryPathNetwork'
+import { FactoryZones } from './scene/FactoryZones'
+
+const chamberSceneOffsetX = -140
 
 interface Props {
   modules: DashboardModule[]
@@ -57,11 +65,18 @@ export const ServerRoom: React.FC<Props> = ({ modules, onSelectModule, selectedM
     }
   }, [])
 
-  const agents = createInspectionAgents(modules, patrolPhase)
+  const agents = createFactoryAgentIntents(modules, patrolPhase)
+  const factoryZones = createFactoryZones(modules)
+  const factoryConduits = createFactoryConduits(factoryZones)
+  const factoryDocks = createFactoryDocks(factoryZones)
+  const factoryRoutes = createFactoryRoutes(modules)
 
   return (
     <div ref={roomRef} className="absolute inset-0 bg-[#030508] overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 w-[2000px] h-[2000px] -translate-x-1/2 -translate-y-1/2 bg-grid-tech">
+      <div
+        className="absolute top-1/2 left-1/2 w-[2000px] h-[2000px] -translate-x-1/2 -translate-y-1/2 bg-grid-tech"
+        style={{ marginLeft: `${chamberSceneOffsetX}px` }}
+      >
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
           <div className="absolute top-1/2 left-1/2 w-[1000px] h-[1000px] bg-cyan-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full"></div>
           <div aria-label="纵深雾化层 1" className="absolute top-1/2 left-1/2 h-[980px] w-[980px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/7 blur-[140px] animate-[breathe_6s_ease-in-out_infinite]"></div>
@@ -160,23 +175,17 @@ export const ServerRoom: React.FC<Props> = ({ modules, onSelectModule, selectedM
           data-cluster-scale={clusterScale.toFixed(3)}
           style={{ transform: `scale(${clusterScale})`, transformOrigin: 'center center' }}
         >
-          {modules.map((module) => (
-            <ServerRack
-              key={module.id}
-              module={module}
-              onClick={onSelectModule}
-              isSelected={module.id === selectedModuleId}
-            />
-          ))}
-
-          <div className="absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-cyan-400/10"></div>
-          <div className="absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400/8"></div>
-          <div className="absolute top-1/2 left-1/2 h-[680px] w-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400/6"></div>
-          <div aria-label="舱室扫描网格 2" className="absolute top-1/2 left-1/2 h-[860px] w-[860px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/5"></div>
-
-          {agents.map((agent) => (
-            <Agent key={agent.id} agent={agent} />
-          ))}
+          <FactoryZones zones={factoryZones} conduits={factoryConduits} />
+          <FactoryInfrastructure docks={factoryDocks} />
+          <FactoryPathNetwork routes={factoryRoutes} />
+          <FactoryAmbientEffects modules={modules} />
+          <FactoryCoreShell />
+          <FactoryModuleLayer
+            modules={modules}
+            onSelectModule={onSelectModule}
+            selectedModuleId={selectedModuleId}
+          />
+          <FactoryAgentLayer agents={agents} />
         </div>
       </div>
     </div>

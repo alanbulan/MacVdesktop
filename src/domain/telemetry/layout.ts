@@ -37,6 +37,22 @@ export const telemetryChamberLayout = {
   pixelUnit: 84,
 } as const
 
+export function getTelemetryModuleLogicalCenter(position: Pick<TelemetryModuleSnapshot, 'x' | 'y'>) {
+  return {
+    x: telemetryChamberLayout.anchorX + position.x * telemetryChamberLayout.spacing,
+    y: telemetryChamberLayout.anchorY + position.y * telemetryChamberLayout.spacing,
+  }
+}
+
+export function getTelemetryModuleCenter(position: Pick<TelemetryModuleSnapshot, 'x' | 'y'>) {
+  const logical = getTelemetryModuleLogicalCenter(position)
+
+  return {
+    x: logical.x * telemetryChamberLayout.pixelUnit,
+    y: logical.y * telemetryChamberLayout.pixelUnit,
+  }
+}
+
 const telemetryClusterScaleConfig = {
   rackWidth: 124,
   rackHeight: 176,

@@ -1,56 +1,35 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { Activity, AlertTriangle, Terminal, Zap } from 'lucide-react'
-import { getModuleDetailLines, getTelemetryOverviewSummary } from '../domain/telemetry/summary'
+import { useLlmRuntime } from '../hooks/useLlmRuntime'
 import { useTelemetry } from '../hooks/useTelemetry'
+import { createDashboardViewModel } from '../lib/telemetryViewModels'
 import type { DashboardModule } from '../types'
+import { LlmRuntimePanel } from './LlmRuntimePanel'
 import { MetricsPanel } from './MetricsPanel'
 import { ServerRoom } from './ServerRoom'
 
 export const Dashboard: React.FC = () => {
   const telemetryResult = useTelemetry()
-  const { snapshot, status, error, helperStatus, startHelper, stopHelper } = telemetryResult
+  const llmRuntimeResult = useLlmRuntime()
   const history = telemetryResult.history ?? {}
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
-
-  const selectedModule = useMemo(
-    () => snapshot.modules.find((module) => module.id === selectedModuleId) ?? null,
-    [selectedModuleId, snapshot.modules],
-  )
-  const overview = getTelemetryOverviewSummary(snapshot)
-  const snapshotStateLabel =
-    status === 'error'
-      ? '快照加载失败'
-      : status === 'loading'
-        ? '快照加载中'
-        : snapshot.runtime.kind === 'browser'
-          ? '浏览器回退快照'
-          : overview.statusLabel === '实时遥测不可用'
-            ? 'Tauri 占位快照'
-            : '宿主遥测快照'
-  const logLines = selectedModule
-    ? getModuleDetailLines(selectedModule)
-    : [
-        overview.selectedHint,
-        overview.runtimeWarning,
-        `快照状态: ${snapshotStateLabel}`,
-        `当前可见模块: ${overview.moduleCountLabel}`,
-        `系统汇报: ${overview.statusLabel}`,
-      ]
+  const viewModel = createDashboardViewModel(telemetryResult, selectedModuleId)
+  const {
+    selectedModule,
+    overview,
+    snapshotStateLabel,
+    telemetryStatusClass,
+    summaryStatusClass,
+    logLines,
+    helperStatus,
+    status,
+    error,
+  } = viewModel
+  const { snapshot, startHelper, stopHelper } = telemetryResult
 
   function handleSelectModule(module: DashboardModule) {
     setSelectedModuleId(module.id)
   }
-
-  const isTelemetryUnavailable = overview.statusLabel === '实时遥测不可用'
-  const telemetryStatusClass =
-    status === 'error'
-      ? 'text-pink-400'
-      : status === 'loading'
-        ? 'text-amber-300'
-        : isTelemetryUnavailable
-          ? 'text-gray-300'
-          : 'text-emerald-400'
-  const summaryStatusClass = isTelemetryUnavailable ? 'text-gray-300' : 'text-emerald-400'
 
   return (
     <div className="relative w-screen h-screen bg-[#030508] text-white font-sans overflow-hidden">
@@ -147,6 +126,32 @@ export const Dashboard: React.FC = () => {
             <div className="text-3xl font-mono text-purple-400">{snapshotStateLabel}</div>
           </div>
 
+          <div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 p-4 text-fuchsia-50">
+            <div className="text-xs uppercase tracking-[0.25em] font-tech text-fuchsia-300">LLM Runtime</div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm text-fuchsia-100">{llmRuntimeResult.state.runtimeLabel}</div>
+                <div className="text-xs text-fuchsia-200/70 font-mono break-all">{llmRuntimeResult.state.activeModelId ?? llmRuntimeResult.state.preferredModelId ?? '未配置模型'}</div>
+              </div>
+              <div className={`text-lg font-mono ${llmRuntimeResult.status === 'error' ? 'text-pink-300' : llmRuntimeResult.state.installationStatus === 'running' ? 'text-emerald-300' : llmRuntimeResult.state.installationStatus === 'installed' ? 'text-cyan-200' : 'text-gray-300'}`}>
+                {llmRuntimeResult.status === 'loading'
+                  ? '探测中'
+                  : llmRuntimeResult.status === 'error'
+                    ? '失败'
+                    : llmRuntimeResult.state.installationStatus === 'running'
+                      ? '运行中'
+                      : llmRuntimeResult.state.installationStatus === 'installed'
+                        ? '已安装'
+                        : llmRuntimeResult.state.installationStatus === 'unhealthy'
+                          ? '异常'
+                          : '未安装'}
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-fuchsia-100/80 leading-relaxed">
+              {llmRuntimeResult.error ?? llmRuntimeResult.state.warnings[0] ?? `Endpoint: ${llmRuntimeResult.state.endpoint}`}
+            </div>
+          </div>
+
           <div className="pt-6 border-t border-cyan-900/30 mt-auto">
             <h3 className="text-sm text-cyan-500 mb-3 font-tech tracking-widest flex items-center space-x-2">
               <Terminal size={14} />
@@ -169,7 +174,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="absolute right-6 top-32 bottom-6 z-50 flex flex-col pointer-events-none">
+      <div className="absolute right-6 top-32 bottom-6 z-50 flex gap-4 pointer-events-none">
         <div className="pointer-events-auto h-full">
           <MetricsPanel
             module={selectedModule}
@@ -177,6 +182,9 @@ export const Dashboard: React.FC = () => {
             helperMessage={helperStatus?.message ?? null}
             onStartHelper={startHelper}
           />
+        </div>
+        <div className="pointer-events-auto h-full">
+          <LlmRuntimePanel runtime={llmRuntimeResult} />
         </div>
       </div>
 

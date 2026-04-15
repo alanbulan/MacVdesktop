@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { UseTelemetryResult } from '../types'
+import type { UseLlmRuntimeResult, UseTelemetryResult } from '../types'
 import { calculateTelemetryClusterScale } from '../domain/telemetry/layout'
 import { Dashboard } from './Dashboard'
 import { ServerRoom } from './ServerRoom'
 
 const mockUseTelemetry = vi.fn<() => UseTelemetryResult>()
+const mockUseLlmRuntime = vi.fn<() => UseLlmRuntimeResult>()
 
 function createTelemetryResult(overrides: Partial<UseTelemetryResult> = {}): UseTelemetryResult {
   return {
@@ -23,13 +24,64 @@ function createTelemetryResult(overrides: Partial<UseTelemetryResult> = {}): Use
   }
 }
 
+function createLlmRuntimeResult(overrides: Partial<UseLlmRuntimeResult> = {}): UseLlmRuntimeResult {
+  return {
+    state: {
+      runtimeKind: 'ollama',
+      installationStatus: 'installed',
+      runtimeLabel: 'Ollama',
+      version: '0.20.7',
+      endpoint: 'http://127.0.0.1:11434',
+      openaiBaseUrl: 'http://127.0.0.1:11434/v1',
+      lanOpenaiBaseUrl: 'http://192.168.12.98:11434/v1',
+      lanNativeBaseUrl: 'http://192.168.12.98:11434',
+      apiKeyHint: 'sk-local-ollama',
+      activeModelId: 'qwen3.5:4b-q4_K_M',
+      preferredModelId: 'qwen3.5:4b-q4_K_M',
+      profile: 'default',
+      modelFamily: 'qwen3',
+      modelClass: 'default',
+      quantization: 'Q4_K_M',
+      contextLength: 4096,
+      keepAlive: '5m',
+      threads: null,
+      gpuOffload: 'auto',
+      managedByApp: false,
+      availableModels: [],
+      runningModels: [],
+      warnings: [],
+      lastError: null,
+      lastSmokeTest: {
+        status: 'not_run',
+        latencyMs: null,
+        updatedAt: null,
+        preview: null,
+        error: null,
+      },
+    },
+    status: 'ready',
+    error: null,
+    refresh: async () => {},
+    startRuntime: async () => {},
+    stopRuntime: async () => {},
+    pullModel: async () => {},
+    runSmokeTest: async () => ({ status: 'passed', updatedAt: '123', latencyMs: 1, preview: '已连接', error: null }),
+    ...overrides,
+  }
+}
+
 vi.mock('../hooks/useTelemetry', () => ({
   useTelemetry: () => mockUseTelemetry(),
+}))
+
+vi.mock('../hooks/useLlmRuntime', () => ({
+  useLlmRuntime: () => mockUseLlmRuntime(),
 }))
 
 describe('Dashboard', () => {
   beforeEach(() => {
     mockUseTelemetry.mockReturnValue(createTelemetryResult())
+    mockUseLlmRuntime.mockReturnValue(createLlmRuntimeResult())
   })
 
   it('uses Chinese browser-mode warning copy instead of fake telemetry status', () => {
@@ -114,6 +166,28 @@ describe('Dashboard', () => {
     render(<Dashboard />)
 
     expect(screen.getAllByText('原生遥测舱').length).toBeGreaterThan(0)
+  })
+
+  it('shows the local LLM runtime card and chosen model', () => {
+    render(<Dashboard />)
+
+    expect(screen.getAllByText('LLM Runtime').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('qwen3.5:4b-q4_K_M').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Ollama').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Smoke Test/i).length).toBeGreaterThan(0)
+  })
+
+  it('keeps the center scene offset left to balance the added right panel', () => {
+    const { container } = render(
+      <ServerRoom
+        modules={[]}
+        onSelectModule={() => {}}
+        selectedModuleId={null}
+      />,
+    )
+
+    const shiftedScene = container.querySelector('[style*="margin-left: -140px"]') as HTMLDivElement | null
+    expect(shiftedScene).toBeTruthy()
   })
 
   it('shows a truthful ready snapshot state label in Chinese', () => {
@@ -239,6 +313,9 @@ describe('Dashboard', () => {
     )
 
     expect(screen.getAllByLabelText(/巡检角色/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText(/计算中枢区 工厂区/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText(/工厂路径网络/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText(/计算中枢区 装配坞/i).length).toBeGreaterThan(0)
   })
 
   it('renders a richer center chamber scaffold without fake telemetry modules', () => {

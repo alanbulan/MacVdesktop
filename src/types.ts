@@ -1,3 +1,4 @@
+import type { LlmRuntimeState, LlmSmokeTestResult } from './domain/llmRuntime/types'
 import type {
   PrivilegedHelperStatus,
   TelemetryMetric,
@@ -38,4 +39,15 @@ export interface UseTelemetryResult {
   helperStatus: PrivilegedHelperStatus | null
   startHelper: () => Promise<void>
   stopHelper: () => Promise<void>
+}
+
+export interface UseLlmRuntimeResult {
+  state: LlmRuntimeState
+  status: TelemetryLoadStatus
+  error: string | null
+  refresh: () => Promise<void>
+  startRuntime: () => Promise<void>
+  stopRuntime: () => Promise<void>
+  pullModel: () => Promise<void>
+  runSmokeTest: () => Promise<LlmSmokeTestResult>
 }

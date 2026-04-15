@@ -9,7 +9,7 @@ use std::path::Path;
 #[cfg(target_os = "macos")]
 use std::process::Command;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use sysinfo::{DiskKind, Disks, Networks, ProcessesToUpdate, System};
+use sysinfo::{DiskKind, Disks, Networks, ProcessesToUpdate, System, MINIMUM_CPU_UPDATE_INTERVAL};
 use tauri::State;
 
 #[cfg(target_os = "macos")]
@@ -104,10 +104,10 @@ pub struct TelemetrySnapshot {
 
 #[derive(Serialize)]
 pub struct PrivilegedHelperStatus {
-    state: &'static str,
-    message: String,
+    pub(crate) state: &'static str,
+    pub(crate) message: String,
     #[serde(rename = "updatedAt", skip_serializing_if = "Option::is_none")]
-    updated_at: Option<String>,
+    pub(crate) updated_at: Option<String>,
 }
 
 #[derive(Clone, Default, Deserialize)]
@@ -121,8 +121,8 @@ struct PowermetricsHostSample {
 }
 
 #[derive(Deserialize)]
-struct PowermetricsHelperPayload {
-    updated_at: String,
+pub(crate) struct PowermetricsHelperPayload {
+    pub(crate) updated_at: String,
     ok: bool,
     sample: PowermetricsHostSample,
     stderr: String,
@@ -493,7 +493,7 @@ fn sample_powermetrics_smc() -> Result<PowermetricsHostSample, String> {
     Err("powermetrics 仅在 macOS 上可用。".to_string())
 }
 
-fn helper_output_path() -> Result<std::path::PathBuf, String> {
+pub(crate) fn helper_output_path() -> Result<std::path::PathBuf, String> {
     std::env::var("HOME")
         .map(|home| Path::new(&home).join(".local/state/macvdesktop/powermetrics.json"))
         .map_err(|_| "无法定位当前用户目录中的高权限遥测样本路径。".to_string())
@@ -1316,6 +1316,8 @@ fn collect_network_module(state: &mut TelemetryCollectorState) -> TelemetryModul
 }
 
 fn collect_top_process_module(system: &mut System) -> TelemetryModuleSnapshot {
+    let _ = system.refresh_processes(ProcessesToUpdate::All, false);
+    std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
     let _ = system.refresh_processes(ProcessesToUpdate::All, true);
 
     let maybe_process = system.processes().values().max_by(|left, right| {
@@ -1917,105 +1919,6 @@ pub fn collect_telemetry_snapshot(state: &mut TelemetryCollectorState) -> Teleme
     }
 }
 
-fn helper_process_running() -> bool {
-    Command::new("/bin/sh")
-        .args(["-c", "ps -ef | egrep 'powermetrics_helper.py|npm run powermetrics:helper' | grep -v egrep >/dev/null"])
-        .status()
-        .map(|status| status.success())
-        .unwrap_or(false)
-}
-
-fn helper_status() -> PrivilegedHelperStatus {
-    let path = match helper_output_path() {
-        Ok(path) => path,
-        Err(reason) => {
-            return PrivilegedHelperStatus {
-                state: "failed",
-                message: reason,
-                updated_at: None,
-            }
-        }
-    };
-
-    if path.exists() {
-        if let Ok(raw) = fs::read_to_string(&path) {
-            if let Ok(payload) = serde_json::from_str::<PowermetricsHelperPayload>(&raw) {
-                let state = if helper_process_running() { "running" } else { "stale" };
-                return PrivilegedHelperStatus {
-                    state,
-                    message: if state == "running" {
-                        "高权限遥测服务正在运行。".to_string()
-                    } else {
-                        "高权限遥测样本存在，但 helper 当前未运行。".to_string()
-                    },
-                    updated_at: Some(payload.updated_at),
-                };
-            }
-        }
-    }
-
-    if helper_process_running() {
-        return PrivilegedHelperStatus {
-            state: "starting",
-            message: "高权限遥测服务正在启动。".to_string(),
-            updated_at: None,
-        };
-    }
-
-    PrivilegedHelperStatus {
-        state: "authorization_required",
-        message: "需要启用高权限宿主遥测才能持续读取 GPU/功耗数据。".to_string(),
-        updated_at: None,
-    }
-}
-
-#[tauri::command]
-pub fn get_privileged_helper_status() -> PrivilegedHelperStatus {
-    helper_status()
-}
-
-#[tauri::command]
-pub fn start_privileged_helper() -> Result<PrivilegedHelperStatus, String> {
-    let command = format!(
-        "cd '{}' && nohup npm run powermetrics:helper >/tmp/macvdesktop-powermetrics-helper.log 2>&1 &",
-        std::env::current_dir()
-            .map_err(|_| "无法定位项目目录。".to_string())?
-            .display()
-    );
-
-    let status = Command::new("osascript")
-        .args([
-            "-e",
-            &format!("do shell script {} with administrator privileges", serde_json::to_string(&command).map_err(|_| "无法构造授权命令。".to_string())?),
-        ])
-        .status()
-        .map_err(|error| format!("无法触发系统授权流程：{error}"))?;
-
-    if !status.success() {
-        return Err("系统授权流程未成功完成。".to_string());
-    }
-
-    Ok(helper_status())
-}
-
-#[tauri::command]
-pub fn stop_privileged_helper() -> Result<PrivilegedHelperStatus, String> {
-    let command = "pkill -f 'powermetrics_helper.py|npm run powermetrics:helper' || true";
-    let status = Command::new("osascript")
-        .args([
-            "-e",
-            &format!("do shell script {} with administrator privileges", serde_json::to_string(command).map_err(|_| "无法构造停止命令。".to_string())?),
-        ])
-        .status()
-        .map_err(|error| format!("无法触发系统授权流程：{error}"))?;
-
-    if !status.success() {
-        return Err("系统授权流程未成功完成。".to_string());
-    }
-
-    Ok(helper_status())
-}
-
 #[tauri::command]
 pub fn get_telemetry_snapshot(state: State<'_, std::sync::Mutex<TelemetryCollectorState>>) -> TelemetrySnapshot {
     let mut state = state.lock().expect("telemetry collector state lock poisoned");
@@ -2025,14 +1928,15 @@ pub fn get_telemetry_snapshot(state: State<'_, std::sync::Mutex<TelemetryCollect
 #[cfg(test)]
 mod tests {
     use super::{
-        alerts_for_status, collect_telemetry_snapshot, compute_cpu_cluster_sample,
-        fan_module_from_apple_smc, gpu_module_from_powermetrics,
+        alerts_for_status, collect_telemetry_snapshot, collect_top_process_module,
+        compute_cpu_cluster_sample, fan_module_from_apple_smc, gpu_module_from_powermetrics,
         memory_pressure_state_label, normalize_process_cpu, parse_powermetrics_output,
         power_module_from_powermetrics, MetalCollectorExecutionState,
         MetalCollectorScaffoldState, MetricState, PowermetricsHostSample, SampleStamp,
         TelemetryCollectorState,
     };
     use std::time::{Duration, Instant};
+    use sysinfo::System;
 
     fn fixed_stamp() -> SampleStamp {
         SampleStamp {
@@ -2064,6 +1968,16 @@ mod tests {
     fn normalize_process_cpu_scales_to_host_capacity() {
         assert_eq!(normalize_process_cpu(240.0, 8), 30.0);
         assert_eq!(normalize_process_cpu(400.0, 4), 100.0);
+    }
+
+    #[test]
+    fn top_process_module_reports_a_named_process_metric() {
+        let mut system = System::new_all();
+        let module = collect_top_process_module(&mut system);
+
+        assert_eq!(module.id, "top-process");
+        assert_eq!(module.secondary_metrics[0].id, "top-process-name");
+        assert!(!module.summary.is_empty());
     }
 
     #[test]

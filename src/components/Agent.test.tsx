@@ -82,5 +82,6 @@ describe('Agent positioning', () => {
     )
 
     expect(screen.getByLabelText(/移动轨迹/i)).toBeTruthy()
+    expect(screen.getByLabelText(/搬运火花/i)).toBeTruthy()
   })
 })

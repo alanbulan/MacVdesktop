@@ -1,87 +1,14 @@
 import React from 'react'
-import { TelemetrySparkline } from './TelemetrySparkline'
-import type { TelemetryMetric } from '../domain/telemetry/types'
+import { Terminal } from 'lucide-react'
+import { createMetricsPanelViewModel, EmptyMetricsPanelIcon } from '../lib/metricsPanelViewModel'
 import type { DashboardModule, TelemetryHistorySample } from '../types'
-import { Activity, CircleAlert, Cpu, HardDrive, Info, Terminal } from 'lucide-react'
+import { TelemetrySparkline } from './TelemetrySparkline'
 
 interface Props {
   module: DashboardModule | null
   history: TelemetryHistorySample[]
   helperMessage?: string | null
   onStartHelper?: () => Promise<void>
-}
-
-interface MetricDisplay {
-  label: string
-  value: string
-  description: string
-  colorClass: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
-}
-
-function formatPrimaryMetric(metric: TelemetryMetric): MetricDisplay {
-  if (metric.state === 'live') {
-    const value = metric.value
-    const description = metric.freshness === 'fresh' ? '真实宿主遥测读数' : '真实宿主遥测读数（缓存，可能已过期）'
-
-    return {
-      label: '主指标',
-      value,
-      description,
-      colorClass: 'text-cyan-300',
-      icon: Activity,
-    }
-  }
-
-  if (metric.state === 'loading') {
-    return {
-      label: '主指标',
-      value: '加载中',
-      description: metric.reason ?? '遥测加载中',
-      colorClass: 'text-amber-300',
-      icon: Activity,
-    }
-  }
-
-  if (metric.state === 'error') {
-    return {
-      label: '主指标',
-      value: '错误',
-      description: metric.reason,
-      colorClass: 'text-pink-400',
-      icon: CircleAlert,
-    }
-  }
-
-  return {
-    label: '主指标',
-    value: '不可用',
-    description: metric.reason,
-    colorClass: 'text-gray-300',
-    icon: CircleAlert,
-  }
-}
-
-function formatSecondaryMetric(metric: TelemetryMetric, label: string): MetricDisplay {
-  if (metric.state === 'live') {
-    const freshnessDescription = metric.freshness === 'stale' ? '来源：tauri-host（缓存样本）' : `来源：${metric.source}`
-
-    return {
-      label,
-      value: metric.value,
-      description: freshnessDescription,
-      colorClass: 'text-cyan-300',
-      icon: Activity,
-    }
-  }
-
-  return {
-    label,
-    value: metric.state === 'error' ? '错误' : metric.state === 'loading' ? '加载中' : '不可用',
-    description: 'reason' in metric && metric.reason ? metric.reason : `来源：${metric.source}`,
-    colorClass: metric.state === 'error' ? 'text-pink-400' : metric.state === 'loading' ? 'text-amber-300' : 'text-gray-300',
-    icon: metric.state === 'error' ? CircleAlert : metric.state === 'loading' ? Activity : Info,
-  }
 }
 
 export const MetricsPanel: React.FC<Props> = ({ module, history, helperMessage, onStartHelper }) => {
@@ -91,7 +18,7 @@ export const MetricsPanel: React.FC<Props> = ({ module, history, helperMessage, 
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
         <div className="w-24 h-24 rounded-full border border-dashed border-cyan-500/30 flex items-center justify-center mb-6 animate-[spin_10s_linear_infinite]">
           <div className="w-16 h-16 rounded-full border border-cyan-400/50 flex items-center justify-center animate-[spin_5s_linear_infinite_reverse]">
-            <Cpu size={32} className="text-cyan-500/50 animate-pulse" />
+            <EmptyMetricsPanelIcon size={32} className="text-cyan-500/50 animate-pulse" />
           </div>
         </div>
         <p className="text-center tracking-widest text-sm font-tech">
@@ -105,10 +32,7 @@ export const MetricsPanel: React.FC<Props> = ({ module, history, helperMessage, 
     )
   }
 
-  const primaryMetric = formatPrimaryMetric(module.primaryMetric)
-  const secondaryMetrics = module.secondaryMetrics.map((metric) =>
-    formatSecondaryMetric(metric.metric, metric.label),
-  )
+  const { primaryMetric, secondaryMetrics, statusLabel } = createMetricsPanelViewModel(module)
 
   return (
     <div className="w-80 h-full glass-panel-active rounded-2xl p-6 flex flex-col text-white overflow-y-auto relative">
@@ -119,7 +43,7 @@ export const MetricsPanel: React.FC<Props> = ({ module, history, helperMessage, 
       <div className="flex items-center space-x-2 mb-8 text-sm font-tech tracking-wider">
         <span className="text-gray-400">当前状态：</span>
         <span className={module.status === 'healthy' ? 'text-cyan-400 text-glow' : module.status === 'warning' ? 'text-amber-300' : module.status === 'critical' ? 'text-pink-400' : 'text-gray-300'}>
-          ● {module.status === 'healthy' ? '健康' : module.status === 'warning' ? '警告' : module.status === 'critical' ? '严重' : '不可用'}
+          ● {statusLabel}
         </span>
       </div>
 
@@ -195,7 +119,7 @@ export const MetricsPanel: React.FC<Props> = ({ module, history, helperMessage, 
           </h3>
           <div className="bg-black/50 p-3 rounded-lg border border-cyan-900/50 text-[11px] text-cyan-400/70 font-mono h-32 overflow-hidden flex flex-col justify-end space-y-1">
             <div className="opacity-50">&gt; 已选择模块：{module.name}</div>
-            <div className="opacity-70">&gt; 上报状态：{module.status === 'healthy' ? '健康' : module.status === 'warning' ? '警告' : module.status === 'critical' ? '严重' : '不可用'}</div>
+            <div className="opacity-70">&gt; 上报状态：{statusLabel}</div>
             <div className="opacity-80">&gt; 主指标：{primaryMetric.value}</div>
             <div className="opacity-90 text-cyan-300">&gt; {primaryMetric.description}</div>
             <div className="animate-pulse text-cyan-200">&gt; _</div>
